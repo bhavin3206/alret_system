@@ -1,14 +1,17 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import *
+from .models import Symbol, Subscription, DeviceToken
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'username', 'password', 'email')
-        extra_kwargs = {'password': {'write_only': True}}
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'email': {'required': True, 'validators': []}
+        }
 
     def create(self, validated_data):
         user = User.objects.create_user(
@@ -17,6 +20,12 @@ class UserSerializer(serializers.ModelSerializer):
             password=validated_data['password']
         )
         return user
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with that email already exists.")
+        return value
+
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -34,7 +43,10 @@ class SymbolSerializer(serializers.ModelSerializer):
         model = Symbol
         fields = ['id', 'name']
 
+
 class SubscriptionSerializer(serializers.ModelSerializer):
+    symbol = serializers.CharField()
+
     class Meta:
         model = Subscription
         fields = ['id', 'symbol', 'threshold_price']
@@ -43,14 +55,15 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         request = self.context.get('request')
         symbol_name = validated_data.pop('symbol')
-        
-        # Check if the symbol exists, if not create it
-        symbol, created = Symbol.objects.get_or_create(name=symbol_name)
 
-        # Create the subscription with the found or created symbol
+        symbol, created = Symbol.objects.get_or_create(name=symbol_name)
         subscription = Subscription.objects.create(user=request.user, symbol=symbol, **validated_data)
         return subscription
 
+    def validate_symbol(self, value):
+        if not Symbol.objects.filter(name=value).exists():
+            Symbol.objects.create(name=value)
+        return value
 
 
 class DeviceTokenSerializer(serializers.ModelSerializer):
@@ -64,4 +77,6 @@ class DeviceTokenSerializer(serializers.ModelSerializer):
         user = request.user
 
         device_token, created = DeviceToken.objects.get_or_create(user=user, token=token)
+        if not created:
+            raise serializers.ValidationError("This device token already exists for the user.")
         return device_token

@@ -1,19 +1,19 @@
-# myapp/views.py
-
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from rest_framework.views import APIView
-from .serializers import *
-from .models import *
+from .serializers import UserSerializer, LoginSerializer, SymbolSerializer, SubscriptionSerializer, DeviceTokenSerializer
+from .models import Symbol, Subscription, DeviceToken
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = []  # No permissions required for registration
 
 class LoginView(APIView):
     serializer_class = LoginSerializer
+    permission_classes = [] 
 
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
@@ -29,12 +29,14 @@ class SymbolListView(generics.ListCreateAPIView):
     serializer_class = SymbolSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+
 class SubscriptionListView(generics.ListCreateAPIView):
     serializer_class = SubscriptionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         return Subscription.objects.filter(user=self.request.user)
+
 
 class DeviceTokenView(generics.ListCreateAPIView):
     serializer_class = DeviceTokenSerializer
