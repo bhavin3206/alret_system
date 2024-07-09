@@ -1,8 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import Symbol, Subscription, DeviceToken
-
+from .models import *
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -40,29 +39,39 @@ class LoginSerializer(serializers.Serializer):
 
 class SymbolSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Symbol
-        fields = ['id', 'name']
+        model = SymbolData
+        fields = ['instrument_token', 'tradingsymbol', 'name', 'expiry', 'exchange', 'segment', 'instrument_type']
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
-    symbol = serializers.CharField()
+    instrument_token = serializers.CharField(write_only=True)
 
     class Meta:
         model = Subscription
-        fields = ['id', 'symbol', 'threshold_price']
+        fields = ['id', 'instrument_token', 'threshold_price']
         read_only_fields = ['user']
 
     def create(self, validated_data):
         request = self.context.get('request')
-        symbol_name = validated_data.pop('symbol')
+        instrument_token = validated_data.pop('instrument_token')
 
-        symbol, created = Symbol.objects.get_or_create(name=symbol_name)
+        try:
+            symbol = SymbolData.objects.get(instrument_token=instrument_token)
+        except SymbolData.DoesNotExist:
+            raise serializers.ValidationError("Symbol with the given instrument token does not exist.")
+
+        if Subscription.objects.filter(user=request.user, symbol=symbol).exists():
+            raise serializers.ValidationError("Subscription with this instrument token already exists.")
+
+        if not request.user.is_superuser and Subscription.objects.filter(user=request.user).count() >= 2:
+            raise serializers.ValidationError("Your subscription limit has been reached. Please try again tomorrow.")
+
         subscription = Subscription.objects.create(user=request.user, symbol=symbol, **validated_data)
         return subscription
 
-    def validate_symbol(self, value):
-        if not Symbol.objects.filter(name=value).exists():
-            Symbol.objects.create(name=value)
+    def validate_instrument_token(self, value):
+        if not SymbolData.objects.filter(instrument_token=value).exists():
+            raise serializers.ValidationError("Invalid instrument token.")
         return value
 
 
