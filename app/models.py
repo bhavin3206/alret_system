@@ -19,9 +19,21 @@ class SymbolData(models.Model):
         ordering = ['expiry']
 
 class Subscription(models.Model):
+    SMS = 'SMS'
+    EMAIL = 'Email'
+    NOTIFICATION = 'Notification'
+
+    ALERT_TYPE_CHOICES = [
+        (SMS, 'SMS'),
+        (EMAIL, 'Email'),
+        (NOTIFICATION, 'Notification'),
+    ]
+
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions')
     symbol = models.ForeignKey(SymbolData, on_delete=models.CASCADE, related_name='subscriptions')
     threshold_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Threshold Price")
+    alert_type = models.CharField(max_digits=15, choices=ALERT_TYPE_CHOICES, default=NOTIFICATION, verbose_name="Alert Type")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
 
     def __str__(self):
