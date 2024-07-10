@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from app.models import SymbolData  # Adjust this import according to your actual app structure
+from app.models import SymbolData, Subscription  # Adjust this import according to your actual app structure
 import requests
 from datetime import datetime
 from django.db import connection
@@ -7,8 +7,6 @@ import json
 from kiteconnect import KiteConnect
 import time
 import pyotp, random
-from requests import Session
-from kiteconnect import KiteTicker
 from kiteconnect import KiteConnect
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
@@ -41,6 +39,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         # url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
         SymbolData.objects.all().delete()
+        Subscription.objects.all().delete()
         self.reset_sequence('app_symboldata')
         # SymbolData.objects.all().delete()
         try:
@@ -51,7 +50,7 @@ class Command(BaseCommand):
                 kite_data = kite.generate_session(self.data["request_token"], api_secret=self.data["api_secret"])
             except:
                 request_token = self.get_request_token(kite)
-                kite_data = kite.generate_session(request_token, api_secret=self.data["api_secret"])
+                kite_data = kite.generate_session(request_token , api_secret=self.data["api_secret"])
 
             kite.set_access_token(kite_data["access_token"])
 
@@ -117,6 +116,8 @@ class Command(BaseCommand):
         driver.find_element(By.ID,'userid').send_keys(self.get_otp())
         self.random_sleep()
         request_token = driver.current_url.split('request_token=')[-1]
+        if '&' in request_token:
+            request_token = request_token.split('&')[0] 
         self.data["request_token"] = request_token
         self.write_json(self.data, 'data.json')
         return request_token

@@ -29,15 +29,23 @@ class Subscription(models.Model):
         (NOTIFICATION, 'Notification'),
     ]
 
+    GREATER_THAN = '>'
+    LESS_THAN = '<'
+
+    LOREM_QUESTION_CHOICES = [
+        (GREATER_THAN, 'Greater than'),
+        (LESS_THAN, 'Less than'),
+    ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions')
     symbol = models.ForeignKey(SymbolData, on_delete=models.CASCADE, related_name='subscriptions')
     threshold_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Threshold Price")
-    alert_type = models.CharField(max_digits=15, choices=ALERT_TYPE_CHOICES, default=NOTIFICATION, verbose_name="Alert Type")
+    alert_type = models.CharField(max_length=15, choices=ALERT_TYPE_CHOICES, default=NOTIFICATION, verbose_name="Alert Type")
+    lorem_question = models.CharField(max_length=1, choices=LOREM_QUESTION_CHOICES, default=GREATER_THAN, verbose_name="Lorem Question")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
 
     def __str__(self):
-        return f"{self.user.username} - {self.symbol.name} - {self.threshold_price}"
+        return f"{self.user.username} - {self.symbol.name} - {self.threshold_price} - {self.alert_type} - {self.lorem_question}"
 
     class Meta:
         unique_together = ('user', 'symbol')
@@ -57,3 +65,16 @@ class DeviceToken(models.Model):
         indexes = [
             models.Index(fields=['user']),
         ]
+
+
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    message = models.CharField(max_length=255)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.message
+
+
+

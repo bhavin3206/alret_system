@@ -3,7 +3,9 @@ from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from django.core.cache import cache
+from django.shortcuts import render, redirect
 from rest_framework.exceptions import *
+from django.contrib.auth.decorators import login_required
 from rest_framework.views import APIView
 from .serializers import UserSerializer, LoginSerializer, SymbolSerializer, SubscriptionSerializer, DeviceTokenSerializer
 from .models import *
@@ -96,3 +98,16 @@ class DeviceTokenView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         return DeviceToken.objects.filter(user=self.request.user)
+
+
+@login_required
+def notifications_list(request):
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
+    return render(request, 'notifications/notifications_list.html', {'notifications': notifications})
+
+@login_required
+def mark_as_read(request, notification_id):
+    notification = Notification.objects.get(id=notification_id, user=request.user)
+    notification.is_read = True
+    notification.save()
+    return redirect('notifications_list')

@@ -48,7 +48,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Subscription
-        fields = ['id', 'instrument_token', 'threshold_price']
+        fields = ['id', 'instrument_token', 'threshold_price', 'alert_type', 'lorem_question']
         read_only_fields = ['user']
 
     def create(self, validated_data):
